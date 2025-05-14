@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <limits>
 #include <string>
+#include <math.h>
 
 template<typename T>
 void analyze_precision(const std::string& type_name) {
@@ -15,13 +16,28 @@ void analyze_precision(const std::string& type_name) {
     while (one + epsilon / two != one) {
         epsilon /= two;
         mantissa_bits++;
+    }  //e = 2^(-n+1)
+
+    int max_exp = 0;
+    T val = one;
+    while (!std::isinf(val)) {
+        val *= two;
+        max_exp++;
+    }
+
+    // Поиск минимальной экспоненты вручную
+    int min_exp = 0;
+    val = one;
+    while (val != T(0)) {
+        val /= two;
+        min_exp--;
     }
 
     std::cout << "Тип: " << type_name << std::endl;
     std::cout << "Машинное эпсилон (ε): " << std::setprecision(20) << epsilon << std::endl;
     std::cout << "Число битов мантиссы: " << mantissa_bits << std::endl;
-    std::cout << "Минимальная степень: " << std::numeric_limits<T>::min_exponent << std::endl;
-    std::cout << "Максимальная степень: " << std::numeric_limits<T>::max_exponent << std::endl;
+    std::cout << "Минимальная степень: " << min_exp << std::endl;
+    std::cout << "Максимальная степень: " << max_exp << std::endl;
 
     // Сравнение значений
     T half_eps = epsilon / two;
