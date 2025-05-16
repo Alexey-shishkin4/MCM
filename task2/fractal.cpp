@@ -30,7 +30,7 @@ int find_or_add_root(cd z, cd roots[], int& root_count) {
         if (abs(z - roots[i]) < ROOT_EPS)
             return i;
     }
-    if (root_count < 10) {
+    if (root_count < 3) {
         roots[root_count++] = z;
         return root_count - 1;
     }
@@ -42,7 +42,7 @@ int main() {
     double xmin = -2.0, xmax = 2.0;
     double ymin = -2.0, ymax = 2.0;
 
-    cd roots[10]; // Будем находить корни сами
+    cd roots[3]; // Будем находить корни сами
     int root_count = 0;
 
     ofstream fout("fractal_data.csv");
