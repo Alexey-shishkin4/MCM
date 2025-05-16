@@ -1,85 +1,99 @@
 #include <iostream>
 #include <cmath>
-#include <complex>
-#include <fstream>
-
 
 #define M_PI 3.14159265358979323846
 
-const double EPS = 1e-10;
+const double EPS    = 1e-10;
+const int    MAX_IT = 1000;
 
+// f(x) = tan(x) - x
 double f(double x) {
-    return tan(x) - x;
+    return std::tan(x) - x;
 }
 
+// f'(x) = 1/cos^2(x) - 1
 double df(double x) {
-    return 1.0 / (cos(x) * cos(x)) - 1.0;
+    double c = std::cos(x);
+    return (std::fabs(c) < EPS ? 1e300 : (1.0/(c*c) - 1.0));
 }
+
 
 double bisection(double a, double b) {
-    while ((b - a) > EPS) {
-        double c = (a + b) / 2;
-        if (f(a) * f(c) < 0) b = c;
-        else a = c;
+    double fa = f(a), fb = f(b);
+    if (fa*fb > 0) {
+        std::cerr << "Ошибка бисекции: нет смены знака.\n";
+        return NAN;
     }
-    return (a + b) / 2;
-}
-
-//cos(4.5) ≈ -0.21
-//1/cos² ≈ 22
-//условие сжимающего отображения нарушено :(
-//double iteration(double x0) {
-//    for (int i = 0; i < 1000; ++i) {
-//        double x1 = tan(x0);  // Новое значение x
-//        if (fabs(x1 - x0) < EPS)  // Условие сходимости
-//            return x1;
-//        x0 = x1;
-//    }
-//    return x0;
-//}
-
-double iteration(double x0, int k) {
-    for (int i = 0; i < 1000; ++i) {
-        double x1 = atan(x0) + k * M_PI;  // Применение итерационной формулы
-        if (fabs(x1 - x0) < EPS)  // Условие сходимости
-            return x1;
-        x0 = x1;
+    while (b - a > EPS) {
+        double c = 0.5*(a + b), fc = f(c);
+        if (fa*fc <= 0) { b = c; fb = fc; }
+        else            { a = c; fa = fc; }
     }
-    return x0;
+    return 0.5*(a + b);
 }
-
 
 double newton(double x0) {
-    for (int i = 0; i < 1000; ++i) {
-        double x1 = x0 - f(x0) / df(x0);
-        if (fabs(x1 - x0) < EPS)
-            return x1;
+    for (int i = 0; i < MAX_IT; ++i) {
+        double deriv = df(x0);
+        if (std::fabs(deriv) < EPS) break;
+        double x1 = x0 - f(x0)/deriv;
+        if (std::fabs(x1 - x0) < EPS) return x1;
         x0 = x1;
     }
     return x0;
 }
 
+// Метод секущих
 double secant(double x0, double x1) {
-    for (int i = 0; i < 1000; ++i) {
-        double fx0 = f(x0);
-        double fx1 = f(x1);
-        if (fabs(fx1 - fx0) < EPS) break;
-        double x2 = x1 - fx1 * (x1 - x0) / (fx1 - fx0);
-        if (fabs(x2 - x1) < EPS)
-            return x2;
-        x0 = x1;
-        x1 = x2;
+    double f0 = f(x0), f1 = f(x1);
+    for (int i = 0; i < MAX_IT; ++i) {
+        double denom = (f1 - f0);
+        if (std::fabs(denom) < EPS) break;
+        double x2 = x1 - f1*(x1 - x0)/denom;
+        if (std::fabs(x2 - x1) < EPS) return x2;
+        x0 = x1; f0 = f1;
+        x1 = x2; f1 = f(x1);
     }
     return x1;
 }
 
-int main() {
-    std::cout.precision(15);
-    std::cout << "Корень уравнения tan(x) = x:\n";
-    std::cout << "Метод деления пополам: " << bisection(4.1, 4.9) << '\n';
-    std::cout << "Метод Ньютона:         " << newton(4.5) << '\n';
-    std::cout << "Метод секущих:         " << secant(4.4, 4.6) << '\n';
-    std::cout << "Метод итераций:        " << iteration(1.0, 1) << '\n';
+// Итерационный метод x = arctan(x) + k*pi
+double fixed_point(double x0, int k) {
+    for (int i = 0; i < MAX_IT; ++i) {
+        double x1 = std::atan(x0) + k*M_PI;
+        if (std::fabs(x1 - x0) < EPS) return x1;
+        x0 = x1;
+    }
+    return x0;
+}
 
+// Интервал по номеру k
+void interval_by_k(int k, double& a, double& b) {
+    const double d = 1e-2;
+    a = k*M_PI - M_PI/2 + d;
+    b = k*M_PI + M_PI/2 - d;
+}
+
+int main() {
+    int k;
+    std::cout << "Введите номер интервала k: ";
+    std::cin >> k;
+
+    double a, b;
+    interval_by_k(k, a, b);
+
+    double mid      = 0.5*(a + b);
+    double root_bis = bisection(a, b);
+    double d = 1e-4;
+    double root_new = newton(root_bis + d);
+    double root_sec = secant(root_bis - d, root_bis + d);
+    double root_it  = fixed_point(mid, k);
+
+    std::cout.precision(15);
+    std::cout << "\nИнтервал: ["<< a <<", "<< b <<"]\n";
+    std::cout << "Бисекция:      " << root_bis << "\n";
+    std::cout << "Ньютона:       " << root_new << "\n";
+    std::cout << "Секущих:       " << root_sec << "\n";
+    std::cout << "Итерационный:  " << root_it  << "\n";
     return 0;
 }
